@@ -1,33 +1,43 @@
-import { Handler, Context, Callback } from 'aws-lambda';
 import { NestFactory } from '@nestjs/core';
+import { configure } from '@codegenie/serverless-express';
+import { Callback, Context, Handler } from 'aws-lambda';
+import helmet from 'helmet';
+import 'dotenv/config';
+
 import { AppModule } from './app.module';
-import { configure as serverlessExpress } from '@vendia/serverless-express';
-import { ExpressAdapter } from '@nestjs/platform-express';
-import express from 'express';
 
-let cachedServer: Handler;
+let server: Handler;
+const port = process.env.PORT || 4000;
 
-async function bootstrap(): Promise<Handler> {
-  if (!cachedServer) {
-    const expressApp = express();
-    const nestApp = await NestFactory.create(
-      AppModule,
-      new ExpressAdapter(expressApp),
-    );
+async function bootstrap() {
+  const app = await NestFactory.create(AppModule);
 
-    nestApp.enableCors();
-    await nestApp.init();
-    
-    cachedServer = serverlessExpress({ app: expressApp });
-  }
-  return cachedServer;
+  app.enableCors({
+    origin: (req, callback) => callback(null, true),
+  });
+  app.use(helmet());
+
+  await app.init();
+
+  const expressApp = app.getHttpAdapter().getInstance();
+  return configure({ app: expressApp });
 }
 
-export const handler: Handler = async (
+export const handler = async (
   event: any,
   context: Context,
   callback: Callback,
 ) => {
-  const server = await bootstrap();
-  return server(event, context, callback);
+  try {
+    if (!server) {
+      console.log('Bootstrapping application...');
+      server = await bootstrap();
+    }
+
+    const result = await server(event, context, callback);
+    return result;
+  } catch (error) {
+    console.error('Error handling request:', error);
+    throw error;
+  }
 };
