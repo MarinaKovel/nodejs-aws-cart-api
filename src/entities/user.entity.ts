@@ -42,6 +42,6 @@ export class User {
   @OneToMany(() => Cart, (cart) => cart.user_id, { cascade: true }) // Reference the user property in Carts
   carts: Cart[];
 
-  @OneToMany(() => Order, (order) => order.userId, { cascade: true })
+  @OneToMany(() => Order, (order) => order.user_id, { cascade: true })
   orders: Order[];
 }

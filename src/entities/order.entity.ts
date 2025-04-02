@@ -38,10 +38,10 @@ export class Order {
   id: string;
 
   @Column({ name: 'user_id', type: 'uuid' })
-  userId: string;
+  user_id: string;
 
   @Column({ name: 'cart_id', type: 'uuid' })
-  cartId: string;
+  cart_id: string;
 
   @Column('jsonb')
   items: Array<{ productId: string; count: number }>;
@@ -84,6 +84,7 @@ export class Order {
   })
   updatedAt: Date;
 
-  @ManyToOne(() => Cart)
+  @ManyToOne(() => Cart, { onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'cart_id' })
   cart: Cart;
 }
