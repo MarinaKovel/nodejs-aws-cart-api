@@ -38,4 +38,10 @@ export class User {
     default: () => 'CURRENT_DATE',
   })
   updated_at: Date;
+
+  @OneToMany(() => Cart, (cart) => cart.user_id, { cascade: true }) // Reference the user property in Carts
+  carts: Cart[];
+
+  @OneToMany(() => Order, (order) => order.userId, { cascade: true })
+  orders: Order[];
 }
