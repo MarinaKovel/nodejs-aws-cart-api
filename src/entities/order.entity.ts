@@ -8,25 +8,17 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { User } from './user.entity';
 import { Cart } from './cart.entity';
+import { OrderStatus } from 'src/order/type';
 
-export enum OrderStatus {
-  CREATED = 'CREATED',
-  PAID = 'PAID',
-  SHIPPED = 'SHIPPED',
-  DELIVERED = 'DELIVERED',
-  CANCELLED = 'CANCELLED',
-}
-
-interface PaymentData {
+export interface PaymentData {
   method: string;
-  card_last4?: string;
+  card_last4?: number;
   email?: string;
   amount: number;
 }
 
-interface DeliveryData {
+export interface DeliveryData {
   address: string;
   city: string;
   zip: string;
@@ -58,7 +50,7 @@ export class Order {
   @Column({
     type: 'enum',
     enum: OrderStatus,
-    default: OrderStatus.CREATED,
+    default: OrderStatus.Open,
   })
   status: OrderStatus;
 

@@ -14,10 +14,12 @@ import { BasicAuthGuard } from '../auth';
 import { OrderService } from '../order';
 import { AppRequest, getUserIdFromRequest } from '../shared';
 import { CartService } from './services';
-import { CreateOrderDto, PutCartPayload } from 'src/order/type';
+import { CreateOrderDto, OrderStatus, PutCartPayload } from 'src/order/type';
+import { Cart } from '../entities/cart.entity';
 import { CartItem } from '../entities/cartItem.entity';
 import { Order } from '../entities/order.entity';
 import { DataSource } from 'typeorm';
+import { CartStatuses } from './models';
 
 @Controller('api/profile/cart')
 export class CartController {
@@ -66,31 +68,68 @@ export class CartController {
   @UseGuards(BasicAuthGuard)
   @Put('order')
   async checkout(@Req() req: AppRequest, @Body() body: CreateOrderDto) {
-    const userId = getUserIdFromRequest(req);
-    const cart = this.cartService.findByUserId(userId);
+    // Start a new transaction
+    const queryRunner = this.dataSource.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
 
-    if (!(cart && (await cart).items.length)) {
-      throw new BadRequestException('Cart is empty');
+    try {
+      const userId = getUserIdFromRequest(req);
+
+      // Get opened cart for user to use transaction
+      const cart = await queryRunner.manager.getRepository(Cart).findOne({
+        where: {
+          user_id: userId,
+          status: CartStatuses.OPEN,
+        },
+      });
+
+      // Get items for current cart
+      const items = await queryRunner.manager.getRepository(CartItem).find({
+        where: {
+          cart_id: cart.id,
+        },
+      });
+      if (!cart || !items.length) {
+        throw new BadRequestException('Cart is empty');
+      }
+
+      // Create order within transaction
+      const { payment, delivery, comments, total } = body;
+      const order = await queryRunner.manager.getRepository(Order).save({
+        user_id: userId,
+        cart_id: cart.id,
+        items,
+        payment,
+        delivery,
+        comments,
+        status: OrderStatus.Open,
+        total,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      });
+
+      // Update cart status to ORDERED
+      await queryRunner.manager.getRepository(Cart).update(
+        { id: cart.id },
+        {
+          status: CartStatuses.ORDERED,
+          updated_at: new Date(),
+        },
+      );
+
+      // Commit the transaction
+      await queryRunner.commitTransaction();
+
+      return { order };
+    } catch (err) {
+      // Rollback in case of error
+      await queryRunner.rollbackTransaction();
+      throw new BadRequestException(err.message);
+    } finally {
+      // Release the query runner
+      await queryRunner.release();
     }
-
-    //const total = await this.cartService.calculateTotal(await cart);
-    const order = this.orderService.create({
-      userId,
-      cart_id: (await cart).id,
-      items: (await cart).items.map(({ product_id, count }) => ({
-        productId: product_id,
-        count,
-      })),
-      address: body.address,
-      total: 0,
-    });
-    // Mark cart as checked out and clear it
-    //await this.cartService.checkout(userId);
-    await this.cartService.removeByUserId(userId);
-
-    return {
-      order,
-    };
   }
 
   @UseGuards(BasicAuthGuard)

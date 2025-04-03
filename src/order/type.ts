@@ -21,12 +21,19 @@ export type Address = {
 };
 export type CreateOrderDto = {
   items: Array<{ productId: string; count: 1 }>;
-  address: {
-    comment: string;
-    address: string;
-    lastName: string;
-    firstName: string;
+  payment: {
+    amount: number;
+    method: string;
+    card_last4: number;
   };
+  delivery: {
+    zip: string;
+    city: string;
+    address: string;
+  };
+  comments: string | null;
+  status: string;
+  total: number;
 };
 
 export type PutCartPayload = {
