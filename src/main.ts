@@ -1,7 +1,5 @@
 import { NestFactory } from '@nestjs/core';
-
 import helmet from 'helmet';
-
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 
@@ -9,12 +7,21 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
   const configService = app.get(ConfigService);
-
   const port = configService.get('APP_PORT') || 4000;
 
   app.enableCors({
-    origin: (req, callback) => callback(null, true),
+    origin: (origin, callback) => {
+      const allowedOrigins = ['https://du8cimatiip87.cloudfront.net'];
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    },
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   });
+
   app.use(helmet());
 
   await app.listen(port, () => {

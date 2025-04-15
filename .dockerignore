@@ -1,0 +1,25 @@
+# Dependency directories (no need to copy as we'll install fresh)
+node_modules/
+
+# Build output (will be generated during build)
+dist/
+
+# Version control
+.gitignore
+
+# Development and test files (not needed in production)
+test/
+*.spec.ts
+
+# Project description (not needed in production)
+README.md
+
+# Description of environment variables (not needed in production)
+env.example
+
+# Environment files (should be handled separately for security)
+.env
+
+# Development files (not needed in production)
+Dockerfile*
+.prettier*
